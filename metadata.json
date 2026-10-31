@@ -1,0 +1,7 @@
+{
+  "name": "Form Persetujuan BIAS Dt/Td - SDN SUMUR WELUT III/440",
+  "description": "Formulir persetujuan imunisasi BIAS Dt/Td SDN SUMUR WELUT III/440 dengan tanda tangan digital dan rekap otomatis Google Sheets.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
