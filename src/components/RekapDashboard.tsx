@@ -11,17 +11,15 @@ import {
   PieChart,
   Trash2,
   Printer,
-  Sparkles,
   ExternalLink,
   ShieldCheck,
   ShieldAlert,
   HeartPulse,
+  AlertCircle,
 } from 'lucide-react';
 import { ConsentRecord, KelasType } from '../types';
 import {
   deleteStoredRecord,
-  generateSampleData,
-  saveConsentRecord,
   SchoolInfo,
 } from '../services/storage';
 
@@ -30,6 +28,7 @@ interface RekapDashboardProps {
   onRecordsChange: (updated: ConsentRecord[]) => void;
   schoolInfo: SchoolInfo;
   spreadsheetUrl?: string;
+  onOpenSheetsTab?: () => void;
 }
 
 export const RekapDashboard: React.FC<RekapDashboardProps> = ({
@@ -37,6 +36,7 @@ export const RekapDashboard: React.FC<RekapDashboardProps> = ({
   onRecordsChange,
   schoolInfo,
   spreadsheetUrl,
+  onOpenSheetsTab,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterKelas, setFilterKelas] = useState<string>('all');
@@ -128,12 +128,6 @@ export const RekapDashboard: React.FC<RekapDashboardProps> = ({
     URL.revokeObjectURL(url);
   };
 
-  const handleLoadSamples = () => {
-    const samples = generateSampleData();
-    samples.forEach((s) => saveConsentRecord(s));
-    onRecordsChange(samples);
-  };
-
   const handleDeleteRecord = (id: string) => {
     const updated = deleteStoredRecord(id);
     onRecordsChange(updated);
@@ -143,8 +137,36 @@ export const RekapDashboard: React.FC<RekapDashboardProps> = ({
     }
   };
 
+  const unsyncedCount = records.filter((r) => !r.syncedToSheets).length;
+
   return (
     <div className="space-y-6">
+      {/* Unsynced Alert Banner */}
+      {unsyncedCount > 0 && (
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-bold text-amber-900">
+                Ada {unsyncedCount} Data Respon Belum Masuk ke Google Sheets
+              </p>
+              <p className="text-[11px] text-amber-800 leading-relaxed">
+                Data sudah aman di arsip sekolah. Untuk merekap seluruh data ke spreadsheet Google Drive, buka menu Google Sheets Rekap.
+              </p>
+            </div>
+          </div>
+          {onOpenSheetsTab && (
+            <button
+              type="button"
+              onClick={onOpenSheetsTab}
+              className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition shadow-xs shrink-0 self-start sm:self-auto"
+            >
+              Sinkronkan ke Google Sheets
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Top Stats Overview */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
@@ -279,22 +301,14 @@ export const RekapDashboard: React.FC<RekapDashboardProps> = ({
 
         {/* Action hints if empty */}
         {records.length === 0 && (
-          <div className="p-8 text-center space-y-3">
+          <div className="p-8 text-center space-y-2">
             <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
               <Users className="w-6 h-6" />
             </div>
-            <p className="text-sm font-semibold text-slate-700">Belum Ada Formulir Persetujuan</p>
+            <p className="text-sm font-semibold text-slate-700">Belum Ada Formulir Masuk</p>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              Orang tua siswa dapat mulai mengisi formulir melalui tab "Formulir Orang Tua". Anda juga dapat memuat contoh data simulasi untuk melihat cara kerja sistem.
+              Data respon akan otomatis masuk dan terekap di sini setiap kali orang tua siswa mengisi formulir persetujuan.
             </p>
-            <button
-              type="button"
-              onClick={handleLoadSamples}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold transition shadow-xs"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Muat Contoh Data Siswa</span>
-            </button>
           </div>
         )}
       </div>

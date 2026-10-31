@@ -1,8 +1,16 @@
 import { ConsentRecord, GoogleSheetsConfig } from '../types';
 
-const STORAGE_KEY_RECORDS = 'bias_consent_records_v2';
+const STORAGE_KEY_RECORDS = 'bias_consent_records_v3';
 const STORAGE_KEY_SHEETS_CONFIG = 'bias_sheets_config_v1';
 const STORAGE_KEY_SCHOOL_INFO = 'bias_school_info_v2';
+
+// Clean up old sample records if existing in browser
+try {
+  localStorage.removeItem('bias_consent_records_v1');
+  localStorage.removeItem('bias_consent_records_v2');
+} catch {
+  // ignore
+}
 
 export interface SchoolInfo {
   namaSekolah: string;
@@ -70,6 +78,11 @@ export const deleteStoredRecord = (id: string): ConsentRecord[] => {
   return updated;
 };
 
+export const clearAllRecords = (): ConsentRecord[] => {
+  localStorage.removeItem(STORAGE_KEY_RECORDS);
+  return [];
+};
+
 export const getSheetsConfig = (): GoogleSheetsConfig | null => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_SHEETS_CONFIG);
@@ -107,90 +120,4 @@ export const getSchoolInfo = (): SchoolInfo => {
 
 export const saveSchoolInfo = (info: SchoolInfo) => {
   localStorage.setItem(STORAGE_KEY_SCHOOL_INFO, JSON.stringify(info));
-};
-
-export const generateSampleData = (): ConsentRecord[] => {
-  const samples: ConsentRecord[] = [
-    {
-      id: 'BIAS-2026-001',
-      createdAt: '2026-10-28T08:15:00.000Z',
-      formattedDate: '28 Okt 2026, 15:15 WIB',
-      namaSiswa: 'Aditia Pratama Putra',
-      kelas: '1-A',
-      jenisVaksin: 'BIAS Dt (Difteri & Tetanus)',
-      jenisKelamin: 'Laki-laki',
-      namaOrangTua: 'Bambang Sugiharto',
-      hubunganOrangTua: 'Ayah',
-      keputusan: 'SETUJU',
-      catatanKesehatan: 'Anak dalam kondisi sehat dan siap imunisasi',
-      tandaTanganUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="80"><path d="M20 50 Q 50 10 90 45 T 160 30" stroke="%230f172a" stroke-width="2.5" fill="none"/></svg>',
-      syncedToSheets: true,
-      syncTimestamp: '2026-10-28T08:15:20.000Z',
-    },
-    {
-      id: 'BIAS-2026-002',
-      createdAt: '2026-10-28T09:20:00.000Z',
-      formattedDate: '28 Okt 2026, 16:20 WIB',
-      namaSiswa: 'Siti Nur Azizah',
-      kelas: '1-B',
-      jenisVaksin: 'BIAS Dt (Difteri & Tetanus)',
-      jenisKelamin: 'Perempuan',
-      namaOrangTua: 'Nurul Hidayati',
-      hubunganOrangTua: 'Ibu',
-      keputusan: 'SETUJU',
-      catatanKesehatan: '',
-      tandaTanganUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="80"><path d="M20 40 Q 60 70 100 20 T 170 45" stroke="%230f172a" stroke-width="2.5" fill="none"/></svg>',
-      syncedToSheets: true,
-      syncTimestamp: '2026-10-28T09:20:15.000Z',
-    },
-    {
-      id: 'BIAS-2026-003',
-      createdAt: '2026-10-29T02:10:00.000Z',
-      formattedDate: '29 Okt 2026, 09:10 WIB',
-      namaSiswa: 'Muhammad Farhan',
-      kelas: '2-A',
-      jenisVaksin: 'BIAS Td (Tetanus & Difteri Lanjutan)',
-      jenisKelamin: 'Laki-laki',
-      namaOrangTua: 'Agus Gunawan',
-      hubunganOrangTua: 'Ayah',
-      keputusan: 'MENOLAK',
-      alasanMenolak: 'Sudah mendapatkan imunisasi Dt / Td secara mandiri di Dokter/RS/Klinik',
-      detailAlasan: 'Farhan sudah diimunisasi Td di RS bulan lalu saat kontrol tahunan.',
-      catatanKesehatan: 'Sudah memiliki sertifikat imunisasi dari dokter anak',
-      tandaTanganUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="80"><path d="M20 30 Q 70 5 120 50 T 180 35" stroke="%230f172a" stroke-width="2.5" fill="none"/></svg>',
-      syncedToSheets: true,
-      syncTimestamp: '2026-10-29T02:10:45.000Z',
-    },
-    {
-      id: 'BIAS-2026-004',
-      createdAt: '2026-10-29T04:45:00.000Z',
-      formattedDate: '29 Okt 2026, 11:45 WIB',
-      namaSiswa: 'Clarissa Aurelia',
-      kelas: '2-B',
-      jenisVaksin: 'BIAS Td (Tetanus & Difteri Lanjutan)',
-      jenisKelamin: 'Perempuan',
-      namaOrangTua: 'Irene Kusuma',
-      hubunganOrangTua: 'Ibu',
-      keputusan: 'SETUJU',
-      catatanKesehatan: 'Anak agak sensitif plester, tapi kondisi badan sehat',
-      tandaTanganUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="80"><path d="M25 55 Q 65 15 110 40 T 175 25" stroke="%230f172a" stroke-width="2.5" fill="none"/></svg>',
-      syncedToSheets: false,
-    },
-    {
-      id: 'BIAS-2026-005',
-      createdAt: '2026-10-30T01:30:00.000Z',
-      formattedDate: '30 Okt 2026, 08:30 WIB',
-      namaSiswa: 'Rian Saputra',
-      kelas: '5',
-      jenisVaksin: 'BIAS Td (Tetanus & Difteri Lanjutan)',
-      jenisKelamin: 'Laki-laki',
-      namaOrangTua: 'Dedy Saputra',
-      hubunganOrangTua: 'Ayah',
-      keputusan: 'SETUJU',
-      catatanKesehatan: '',
-      tandaTanganUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="80"><path d="M15 45 Q 55 20 100 50 T 165 40" stroke="%230f172a" stroke-width="2.5" fill="none"/></svg>',
-      syncedToSheets: false,
-    },
-  ];
-  return samples;
 };

@@ -244,3 +244,65 @@ export const checkSpreadsheetAccess = async (
     sheets,
   };
 };
+
+/**
+ * Direct HTTP Webhook to Google Sheets (Google Apps Script)
+ * Useful for public parents filling forms on their own smartphones without requiring a Google login.
+ */
+export const postToGoogleSheetsWebhook = async (
+  webhookUrl: string,
+  record: ConsentRecord
+): Promise<boolean> => {
+  try {
+    const payload = JSON.stringify({
+      ...record,
+      rowValues: formatRecordToSheetRow(record),
+    });
+
+    // Use mode: 'no-cors' so Google Apps Script redirects don't fail CORS in browser
+    await fetch(webhookUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8',
+      },
+      body: payload,
+    });
+    return true;
+  } catch (err) {
+    console.warn('Webhook post failed:', err);
+    return false;
+  }
+};
+
+export const SAMPLE_APPS_SCRIPT_CODE = `function doPost(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("Rekap BIAS") || ss.getSheets()[0];
+    
+    // Pastikan header ada di baris pertama
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow([
+        'Waktu Pengisian (WIB)', 'ID Respon', 'Nama Lengkap Siswa', 'Kelas',
+        'Jenis Vaksin', 'Jenis Kelamin', 'Nama Orang Tua/Wali', 'Hubungan Keluarga',
+        'Status Persetujuan', 'Alasan Jika Menolak', 'Detail Penjelasan Alasan',
+        'Catatan Kondisi Anak', 'Verifikasi Tanda Tangan Digital'
+      ]);
+      sheet.getRange(1, 1, 1, 13).setBackground("#0d8870").setFontColor("#ffffff").setFontWeight("bold");
+    }
+    
+    var data = JSON.parse(e.postData.contents);
+    var row = data.rowValues || [
+      data.formattedDate, data.id, data.namaSiswa, data.kelas, data.jenisVaksin,
+      data.jenisKelamin, data.namaOrangTua, data.hubunganOrangTua, data.keputusan,
+      data.alasanMenolak || '-', data.detailAlasan || '-', data.catatanKesehatan || '-',
+      data.tandaTanganUrl ? 'Terverifikasi' : '-'
+    ];
+    
+    sheet.appendRow(row);
+    return ContentService.createTextOutput(JSON.stringify({ status: "success" })).setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: error.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
+

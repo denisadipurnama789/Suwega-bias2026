@@ -11,10 +11,11 @@ import {
   Loader2,
   Info,
   HeartPulse,
+  ExternalLink,
 } from 'lucide-react';
 import { KelasType, KeputusanType, ConsentRecord } from '../types';
 import { SignaturePad } from './SignaturePad';
-import { appendRowToSpreadsheet } from '../services/googleSheets';
+import { appendRowToSpreadsheet, postToGoogleSheetsWebhook } from '../services/googleSheets';
 import { getAccessToken } from '../services/firebaseAuth';
 import { getSheetsConfig, saveConsentRecord, updateRecordSyncStatus, SchoolInfo } from '../services/storage';
 
@@ -22,6 +23,7 @@ interface ConsentFormProps {
   schoolInfo: SchoolInfo;
   onSuccess: (record: ConsentRecord) => void;
   onOpenInfoModal: () => void;
+  onOpenSheetsTab?: () => void;
 }
 
 const KELAS_OPTIONS: { label: string; value: KelasType; vaccine: 'Dt' | 'Td'; targetDesc: string }[] = [
@@ -44,6 +46,7 @@ export const ConsentForm: React.FC<ConsentFormProps> = ({
   schoolInfo,
   onSuccess,
   onOpenInfoModal,
+  onOpenSheetsTab,
 }) => {
   const [namaSiswa, setNamaSiswa] = useState('');
   const [kelas, setKelas] = useState<KelasType | ''>('1-A');
@@ -149,20 +152,37 @@ export const ConsentForm: React.FC<ConsentFormProps> = ({
       // 1. Save to localStorage first for reliable offline/data guarantee
       saveConsentRecord(newRecord);
 
-      // 2. Check if Google Sheets sync is configured and token is active
+      // 2. Check if Google Sheets sync is configured (via Webhook or Google OAuth)
       const sheetsConfig = getSheetsConfig();
-      if (sheetsConfig?.spreadsheetId) {
+      let isSynced = false;
+
+      // Method A: If Webhook URL is set (Universal sync from any smartphone without login)
+      if (sheetsConfig?.webhookUrl) {
+        try {
+          const ok = await postToGoogleSheetsWebhook(sheetsConfig.webhookUrl, newRecord);
+          if (ok) isSynced = true;
+        } catch (e) {
+          console.warn('Webhook sync error:', e);
+        }
+      }
+
+      // Method B: If Google OAuth Token is active in session
+      if (!isSynced && sheetsConfig?.spreadsheetId) {
         try {
           const accessToken = await getAccessToken();
           if (accessToken) {
             await appendRowToSpreadsheet(accessToken, sheetsConfig.spreadsheetId, newRecord);
-            updateRecordSyncStatus(newRecord.id, true, sheetsConfig.spreadsheetId);
-            newRecord.syncedToSheets = true;
-            newRecord.spreadsheetId = sheetsConfig.spreadsheetId;
+            isSynced = true;
           }
         } catch (sheetErr) {
           console.warn('Sync to Google Sheets delayed or token expired:', sheetErr);
         }
+      }
+
+      if (isSynced) {
+        updateRecordSyncStatus(newRecord.id, true, sheetsConfig?.spreadsheetId);
+        newRecord.syncedToSheets = true;
+        newRecord.spreadsheetId = sheetsConfig?.spreadsheetId;
       }
 
       onSuccess(newRecord);
@@ -173,10 +193,12 @@ export const ConsentForm: React.FC<ConsentFormProps> = ({
     }
   };
 
+  const currentSheetsConfig = getSheetsConfig();
+
   return (
     <div className="w-full max-w-2xl mx-auto pb-16">
       {/* Puskesmas & UKS Header Card */}
-      <div className="bg-linear-to-r from-emerald-800 to-teal-700 text-white rounded-2xl p-5 sm:p-7 shadow-lg shadow-emerald-950/10 mb-6 relative overflow-hidden">
+      <div className="bg-linear-to-r from-emerald-800 to-teal-700 text-white rounded-2xl p-5 sm:p-7 shadow-lg shadow-emerald-950/10 mb-5 relative overflow-hidden">
         {/* Background decorative circles */}
         <div className="absolute -right-8 -bottom-8 w-40 h-40 bg-white/10 rounded-full blur-xl pointer-events-none" />
         <div className="absolute -left-10 -top-10 w-32 h-32 bg-emerald-400/10 rounded-full blur-lg pointer-events-none" />
@@ -217,6 +239,61 @@ export const ConsentForm: React.FC<ConsentFormProps> = ({
         </div>
       </div>
 
+      {/* Live Google Sheets Connection Status Banner */}
+      <div className="mb-5 rounded-2xl border p-4 transition bg-white shadow-xs">
+        {currentSheetsConfig?.spreadsheetId ? (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start sm:items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-800">
+                  Google Sheets Terhubung: <span className="text-emerald-700">{currentSheetsConfig.spreadsheetTitle}</span>
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  Respon form otomatis tersinkron ke spreadsheet Google Drive sekolah.
+                </p>
+              </div>
+            </div>
+            {currentSheetsConfig.spreadsheetUrl && (
+              <a
+                href={currentSheetsConfig.spreadsheetUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-200 inline-flex items-center gap-1 shrink-0 self-start sm:self-auto"
+              >
+                <span>Buka Google Sheets</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-amber-50/80 border border-amber-200 p-3 rounded-xl">
+            <div className="flex items-start gap-2.5">
+              <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="text-xs font-bold text-amber-900">
+                  Google Sheets Belum Terhubung ke Akun Sekolah
+                </p>
+                <p className="text-[11px] text-amber-800 leading-relaxed">
+                  Data yang diisi orang tua saat ini tersimpan aman di database sekolah. Untuk langsung merekap ke Google Drive sekolah secara otomatis, hubungkan akun Google di menu <strong>"Google Sheets Rekap"</strong>.
+                </p>
+              </div>
+            </div>
+            {onOpenSheetsTab && (
+              <button
+                type="button"
+                onClick={onOpenSheetsTab}
+                className="text-xs font-bold bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white px-3.5 py-2 rounded-xl transition shrink-0 shadow-xs self-start sm:self-auto"
+              >
+                Hubungkan Sekarang
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       {errorMessage && (
         <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-start gap-3 shadow-xs">
           <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
@@ -253,7 +330,7 @@ export const ConsentForm: React.FC<ConsentFormProps> = ({
                 required
                 value={namaSiswa}
                 onChange={(e) => setNamaSiswa(e.target.value)}
-                placeholder="Contoh: Muhammad Rizky Pratama"
+                placeholder="Masukkan nama lengkap siswa..."
                 className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition bg-slate-50/50 focus:bg-white"
               />
             </div>
@@ -362,7 +439,7 @@ export const ConsentForm: React.FC<ConsentFormProps> = ({
                 required
                 value={namaOrangTua}
                 onChange={(e) => setNamaOrangTua(e.target.value)}
-                placeholder="Contoh: Bambang Sugiharto / Siti Nurhaliza"
+                placeholder="Masukkan nama lengkap orang tua / wali..."
                 className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition bg-slate-50/50 focus:bg-white"
               />
             </div>

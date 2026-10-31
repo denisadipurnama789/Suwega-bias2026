@@ -8,6 +8,7 @@ import {
   ShieldX,
   ExternalLink,
   School,
+  AlertCircle,
 } from 'lucide-react';
 import { ConsentRecord } from '../types';
 import { SchoolInfo } from '../services/storage';
@@ -43,17 +44,29 @@ export const SubmissionSuccessModal: React.FC<SubmissionSuccessModalProps> = ({
           Terima kasih atas partisipasi Anda dalam program Bulan Imunisasi Anak Sekolah (BIAS). Respon Anda telah dicatat secara resmi oleh pihak {schoolInfo.namaSekolah}.
         </p>
 
-        {record.syncedToSheets && spreadsheetUrl && (
+        {record.syncedToSheets ? (
           <div className="pt-2">
             <a
-              href={spreadsheetUrl}
+              href={spreadsheetUrl || 'https://docs.google.com/spreadsheets'}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-white hover:bg-emerald-100/50 px-3 py-1.5 rounded-lg border border-emerald-300 font-medium transition"
+              className="inline-flex items-center gap-1.5 text-xs text-emerald-900 bg-emerald-100 hover:bg-emerald-200 px-4 py-2 rounded-xl border border-emerald-300 font-semibold transition shadow-xs"
             >
-              <ExternalLink className="w-3.5 h-3.5" />
-              <span>Data otomatis tersinkron ke Google Sheets Rekap Sekolah</span>
+              <ExternalLink className="w-4 h-4 text-emerald-700" />
+              <span>Data Berhasil Langsung Masuk ke Google Sheets (Buka File)</span>
             </a>
+          </div>
+        ) : (
+          <div className="pt-2">
+            <div className="inline-block p-3 rounded-xl bg-amber-50/90 border border-amber-300 text-left max-w-lg mx-auto shadow-xs">
+              <p className="text-xs text-amber-900 font-bold flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>Status Google Sheets: Belum Terkirim ke Spreadsheet</span>
+              </p>
+              <p className="text-[11px] text-amber-800 mt-1 leading-relaxed">
+                Data respon tersimpan aman di database sekolah. Untuk menyinkronkannya ke Google Sheets, pastikan akun Google Sekolah telah dihubungkan di menu <strong>"Google Sheets Rekap"</strong> lalu klik <strong>"Sinkronkan Sekarang"</strong>.
+              </p>
+            </div>
           </div>
         )}
       </div>

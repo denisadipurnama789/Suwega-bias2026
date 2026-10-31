@@ -26,5 +26,6 @@ export interface GoogleSheetsConfig {
   spreadsheetUrl: string;
   spreadsheetTitle: string;
   autoSync: boolean;
+  webhookUrl?: string; // Optional Google Apps Script webhook for universal direct sync
   lastSyncedAt?: string;
 }

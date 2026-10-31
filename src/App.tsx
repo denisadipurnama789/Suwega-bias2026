@@ -28,22 +28,11 @@ import {
   getSchoolInfo,
   getSheetsConfig,
   SchoolInfo,
-  generateSampleData,
-  saveConsentRecord,
 } from './services/storage';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'form' | 'rekap' | 'sheets'>('form');
-  const [records, setRecords] = useState<ConsentRecord[]>(() => {
-    const existing = getStoredRecords();
-    if (existing.length === 0) {
-      // Seed initial sample data for demonstration if empty
-      const samples = generateSampleData();
-      samples.forEach((s) => saveConsentRecord(s));
-      return samples;
-    }
-    return existing;
-  });
+  const [records, setRecords] = useState<ConsentRecord[]>(() => getStoredRecords());
 
   const [schoolInfo, setSchoolInfo] = useState<SchoolInfo>(() => getSchoolInfo());
   const [sheetsConfig, setSheetsConfig] = useState<GoogleSheetsConfig | null>(() => getSheetsConfig());
@@ -212,6 +201,7 @@ export default function App() {
                 schoolInfo={schoolInfo}
                 onSuccess={handleFormSuccess}
                 onOpenInfoModal={() => setShowInfoModal(true)}
+                onOpenSheetsTab={() => setActiveTab('sheets')}
               />
             )}
 
@@ -221,6 +211,7 @@ export default function App() {
                 onRecordsChange={(newRecords) => setRecords(newRecords)}
                 schoolInfo={schoolInfo}
                 spreadsheetUrl={sheetsConfig?.spreadsheetUrl}
+                onOpenSheetsTab={() => setActiveTab('sheets')}
               />
             )}
 
